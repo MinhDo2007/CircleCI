@@ -1,7 +1,10 @@
 version: 2
+test:
+  pre:
+    - bin/run-rubocop.sh
 
 defaults: &defaults
-  docker;
+  docker:
     - image: circleci/ruby:2.6.1
       environment:
         RAILS_ENV: test
@@ -25,9 +28,10 @@ references:
     setup_rails: &setup_rails
       name: setup rails
       command: |
+        sudo apt-get install nodejs
         gem install bundle
         RAILS_ENV=test bundle install --path vendor/bundle
-        RAILS_ENV=test bundle exec rails db:create db:schema:load
+        RAILS_ENV=test bundle exec rails db:drop db:create db:migrate
     setup_postgresql: &setup_postgresql
       name: setup_postgresql
       command: sudo apt install -y postgresql-client || true
@@ -36,8 +40,9 @@ references:
       command: bundle exec rspec
     exec_rubocop: &exec_rubocop
       name: exec_rubocop
-      command: bundle exec rubocop
-
+      command: |
+        chmod +x bin/run-rubocop.sh
+        bin/run-rubocop.sh
 jobs:
   build: &build_defaults
     <<: *defaults
@@ -49,7 +54,7 @@ jobs:
       - run: *setup_rails
       - run: *setup_postgresql
       - save_cache: *save_api_bundle_cache
-      - run: *exec_test
-      - run: *rubocop
+      # - run: *exec_test
+      - run: *exec_rubocop
       - store_test_results:
           path: /tmp/test-results
