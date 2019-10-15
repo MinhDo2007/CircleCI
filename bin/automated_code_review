@@ -1,0 +1,30 @@
+#!/usr/bin/env ruby
+require 'net/http'
+require 'json'
+
+github_access_token = ENV['PRONTO_GITHUB_ACCESS_TOKEN'] || '' # Env set manualy on Circle CI to access token with proper rights
+pull_request_url = ENV['CI_PULL_REQUEST'] || '' # Env set automaticaly by Circle CI
+pull_request_id = pull_request_url.split('/').last # Example: 'https://github.com/rails/rails/pull/20554'
+
+repo_owner = 'repo_owner'
+repo_name = 'repo_name'
+
+puts 'Set PRONTO_GITHUB_ACCESS_TOKEN var' if github_access_token.empty?
+puts 'No Pull Request recognized' if pull_request_id.nil?
+
+if !github_access_token.empty? && !pull_request_id.nil?
+  uri = URI("https://api.github.com/repos/#{repo_owner}/#{repo_name}/pulls/#{pull_request_id}")
+
+  Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == 'https') do |http|
+    # Get Pull request base commit (to compage agains
+    # this commit instead of master)
+    request = Net::HTTP::Get.new uri
+    request['Authorization'] = "token #{github_access_token}"
+    response = http.request request # Net::HTTPResponse object
+    base_commit_sha = JSON.parse(response.body)['base']['sha']
+
+    # Post PR review
+    system "((PULL_REQUEST_ID=#{pull_request_id} bundle exec pronto run -f \
+              github_status github_pr -c #{base_commit_sha})) || true"
+  end
+end

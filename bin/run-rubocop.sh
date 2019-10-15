@@ -1,39 +1,21 @@
 #!/bin/bash
-set -v
 if [ "${CIRCLE_BRANCH}" != "master" ]; then
-  # Circle-CI
-  #
+    warn=$(git diff -z --name-only origin/master \
+           | xargs -0 bundle exec rubocop-select \
+           | xargs --no-run-if-empty bundle exec rubocop)
 
-  gem install --no-document rubocop-select rubocop rubocop-checkstyle_formatter \
-              checkstyle_filter-git saddler saddler-reporter-github
-
-  # CircleCI stop script ;(
-  # git diff -z --name-only origin/master
-
-  git diff -z --name-only origin/master \
-   | xargs -0 rubocop-select
-
-  git diff -z --name-only origin/master \
-   | xargs -0 rubocop-select \
-   | xargs rubocop \
-       --require rubocop/formatter/checkstyle_formatter \
-       --format RuboCop::Formatter::CheckstyleFormatter
-
-  git diff -z --name-only origin/master \
-   | xargs -0 rubocop-select \
-   | xargs rubocop \
-       --require rubocop/formatter/checkstyle_formatter \
-       --format RuboCop::Formatter::CheckstyleFormatter \
-   | checkstyle_filter-git diff origin/master
-
-  git diff -z --name-only origin/master \
-   | xargs -0 rubocop-select \
-   | xargs rubocop \
-       --require rubocop/formatter/checkstyle_formatter \
-       --format RuboCop::Formatter::CheckstyleFormatter \
-   | checkstyle_filter-git diff origin/master \
-   | saddler report \
-      --require saddler/reporter/github \
-      --reporter Saddler::Reporter::Github::PullRequestReviewComment
+    detected=$(echo "$warn" | grep "Offenses:")
+    if [ -n "$detected" ]; then
+        echo "$warn" \
+        | bundle exec rubocop \
+            --require rubocop/formatter/checkstyle_formatter \
+            --format RuboCop::Formatter::CheckstyleFormatter \
+        | bundle exec checkstyle_filter-git diff origin/master \
+        | bundle exec saddler report \
+            --require saddler/reporter/github \
+            --reporter Saddler::Reporter::Github::PullRequestReviewComment
+        exit 1
+    fi
 fi
+
 exit 0
