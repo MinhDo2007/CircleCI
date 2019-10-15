@@ -38,7 +38,6 @@ references:
     exec_rubocop: &exec_rubocop
       name: exec_rubocop
       command: bundle exec rubocop
-
 jobs:
   build: &build_defaults
     <<: *defaults

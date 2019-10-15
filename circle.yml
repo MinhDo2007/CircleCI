@@ -1,0 +1,12 @@
+machine:
+  ruby:
+    version:
+      2.6.1
+
+  environment:
+    CIRCLE_ENV: test
+
+test:
+  pre:
+    - chmod +x bin/run-rubocop.sh
+    - bin/run-rubocop.sh
