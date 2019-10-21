@@ -13,10 +13,10 @@ defaults: &defaults
 aliases:
   - &restore_api_bundle_cache
     keys:
-      - zeku_ruby_bundle_{{ checksum "Gemfile.lock" }}
-      - zeku_ruby_bundle_
+      - circle_ruby_bundle_{{ checksum "Gemfile.lock" }}
+      - circle_ruby_bundle_
   - &save_api_bundle_cache
-    key: zeku_ruby_bundle_{{ checksum "Gemfile.lock" }}
+    key: circle_ruby_bundle_{{ checksum "Gemfile.lock" }}
     paths:
       - vendor/bundle
 
@@ -35,21 +35,26 @@ references:
     exec_test: &exec_test
       name: exec_test
       command: bundle exec rspec
+    exec_comment_rubocop: &exec_comment_rubocop
+      name: exec_comment_rubocop
+      command: |
+        chmod +x bin/run-rubocop.sh
+        bin/run-rubocop.sh
     exec_rubocop: &exec_rubocop
       name: exec_rubocop
       command: bundle exec rubocop
-
 jobs:
   build: &build_defaults
     <<: *defaults
     parallelism: 4
-    working_directory: ~/zeku_ruby
+    working_directory: ~/CIRCLECI
     steps:
       - checkout
       - restore_cache: *restore_api_bundle_cache
       - run: *setup_rails
       - run: *setup_postgresql
       - save_cache: *save_api_bundle_cache
+      - run: *exec_comment_rubocop
       # - run: *exec_test
       - run: *exec_rubocop
       - store_test_results:
